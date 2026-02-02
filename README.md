@@ -122,14 +122,42 @@ docs/
 - **Cost**: ~$0.01-0.03 per document
 - **Accuracy**: ~95%+ on high-quality documents
 
-## 🔒 Security Notes
+## 🔒 Security & Deployment
 
-⚠️ **Current implementation is for demo/portfolio purposes:**
-- API keys exposed in browser (use backend proxy for production)
-- No authentication/authorization
-- Client-side storage only
+### 🔐 Production Security
 
-**For production use**: Migrate API calls to secure backend, add authentication, use database storage.
+This app is production-ready with secure deployment to Netlify:
+
+- ✅ **API Keys Protected**: Never exposed to the browser
+- ✅ **Serverless Functions**: All API calls proxied through Netlify Functions
+- ✅ **Cost Limits**: Automatic $1/day spending limit
+- ✅ **Security Headers**: X-Frame-Options, CSP, and HTTPS enforced
+
+### 🚀 Deploy to Netlify
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start)
+
+**Quick Deploy:**
+1. Click the button above or connect your Git repository
+2. Set `ANTHROPIC_API_KEY` environment variable in Netlify
+3. Deploy! Your app will be live with full security
+
+📖 **[Full Deployment Guide](DEPLOYMENT.md)** - Complete setup instructions, cost management, and troubleshooting
+
+### Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# For local testing with Netlify Functions
+npm run dev:netlify
+
+# Standard Vite dev server (no functions)
+npm run dev
+```
+
+**Note**: You'll need a `.env` file with `ANTHROPIC_API_KEY` for local development with functions. See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 
 ## 🚧 Roadmap
 
@@ -143,6 +171,7 @@ docs/
 
 ## 📚 Documentation
 
+- [DEPLOYMENT.md](DEPLOYMENT.md) - **Netlify deployment guide with security setup**
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System design and philosophy
 - [CHANGELOG.md](CHANGELOG.md) - Version history and changes
 - [ADR Directory](docs/adr/) - Architecture decision records

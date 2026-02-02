@@ -1,37 +1,73 @@
 // src/services/claudeService.js
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from './logger.js';
-
-const client = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-  dangerouslyAllowBrowser: true // Only for demo - use backend in production
-});
 
 /**
  * EXTRACT AGENT
- * Uses Claude Sonnet for multimodal document extraction
+ * Uses Claude Sonnet for multimodal document extraction via Netlify Function
  * Returns raw extracted fields without validation
  */
 export async function extractDocumentData(imageBase64) {
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg', // Adjust based on actual file type
-                data: imageBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: `You are a financial document data extraction assistant. Extract payment-relevant information from invoices, receipts, bills, and statements.
+    const response = await fetch('/.netlify/functions/claude-extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ imageBase64 }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Extraction failed');
+    }
+
+    const extractedData = result.data;
+    
+    // Log what was extracted
+    logger.info('Data extracted successfully', {
+      documentType: extractedData.document_type,
+      extractionQuality: extractedData.extraction_quality,
+      paymentStatus: extractedData.payment_status,
+      hasVendor: !!extractedData.vendor_name,
+      hasAmount: !!extractedData.total_amount
+    });
+    
+    return {
+      success: true,
+      data: extractedData,
+      cost: {
+        input_tokens: result.usage.inputTokens,
+        output_tokens: result.usage.outputTokens,
+        total_cost: result.usage.cost,
+        breakdown: {
+          input: result.usage.cost * (result.usage.inputTokens / (result.usage.inputTokens + result.usage.outputTokens)),
+          output: result.usage.cost * (result.usage.outputTokens / (result.usage.inputTokens + result.usage.outputTokens))
+        }
+      },
+      usage: result.usage // Include full usage info for cost tracking
+    };
+
+  } catch (error) {
+    logger.error('Document extraction failed', error, {
+      step: 'extract',
+      hasImage: !!imageBase64,
+      imageSize: imageBase64?.length
+    });
+    
+    return {
+      success: false,
+      error: error.message || 'Failed to extract document data',
+      errorType: error.type || 'extraction_error',
+      data: null
+    };
+  }
+}
 
 STEP 1: Identify the document type first by analyzing the content and structure.
 
@@ -188,75 +224,31 @@ Return ONLY the JSON object, no markdown formatting or explanation.`
 
 /**
  * SCORE AGENT
- * Uses Claude Haiku to generate confidence scores and reasoning
+ * Uses Claude Haiku to generate confidence scores and reasoning via Netlify Function
  * Analyzes extraction quality and validation results
  */
 export async function scoreExtractedData(extractedData, validationResults) {
   try {
-    const message = await client.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 1000,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a confidence scoring agent. Analyze this extracted document data and validation results to generate confidence scores.
-
-Extracted Data:
-${JSON.stringify(extractedData, null, 2)}
-
-Validation Results:
-${JSON.stringify(validationResults, null, 2)}
-
-For each field, provide:
-1. Confidence score (0.0 to 1.0)
-2. Brief reasoning explaining the score
-
-Consider these factors:
-- Extraction quality metadata
-- Validation pass/fail status
-- Cross-field consistency
-- Typical field locations and patterns
-
-Return ONLY a valid JSON object with this structure:
-{
-  "vendor_name": {
-    "confidence": 0.95,
-    "reasoning": "Clear text, standard location"
-  },
-  "invoice_number": {
-    "confidence": 0.90,
-    "reasoning": "Standard format, clearly visible"
-  },
-  "invoice_date": {
-    "confidence": 0.85,
-    "reasoning": "Valid format, consistent with other dates"
-  },
-  "due_date": {
-    "confidence": 0.80,
-    "reasoning": "Valid but unusual spacing from invoice date"
-  },
-  "amount_due": {
-    "confidence": 0.70,
-    "reasoning": "Value clear but validation warning on line item mismatch"
-  }
-}
-
-Include all fields that were extracted. Use 0.0 confidence for fields that failed validation.
-Threshold: <0.7 confidence requires mandatory human review.
-
-Return ONLY the JSON object, no markdown or explanation.`
-        }
-      ]
+    const response = await fetch('/.netlify/functions/claude-score', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ extractedData, validationResults }),
     });
 
-    const responseText = message.content[0].text;
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-      throw new Error('Failed to extract JSON from scoring response');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
-    const scores = JSON.parse(jsonMatch[0]);
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Scoring failed');
+    }
+
+    const scores = result.data.field_scores;
     
     // Map scores to UI field names as well
     const mappedScores = {
@@ -270,7 +262,16 @@ Return ONLY the JSON object, no markdown or explanation.`
     return {
       success: true,
       scores: mappedScores,
-      cost: calculateCost('haiku', message.usage)
+      cost: {
+        input_tokens: result.usage.inputTokens,
+        output_tokens: result.usage.outputTokens,
+        total_cost: result.usage.cost,
+        breakdown: {
+          input: result.usage.cost * (result.usage.inputTokens / (result.usage.inputTokens + result.usage.outputTokens)),
+          output: result.usage.cost * (result.usage.outputTokens / (result.usage.inputTokens + result.usage.outputTokens))
+        }
+      },
+      usage: result.usage
     };
 
   } catch (error) {
@@ -281,34 +282,4 @@ Return ONLY the JSON object, no markdown or explanation.`
       scores: null
     };
   }
-}
-
-/**
- * Calculate cost based on model and token usage
- */
-function calculateCost(model, usage) {
-  const prices = {
-    sonnet: {
-      input: 0.003, // per 1k tokens
-      output: 0.015
-    },
-    haiku: {
-      input: 0.0003,
-      output: 0.0015
-    }
-  };
-
-  const price = prices[model];
-  const inputCost = (usage.input_tokens / 1000) * price.input;
-  const outputCost = (usage.output_tokens / 1000) * price.output;
-  
-  return {
-    input_tokens: usage.input_tokens,
-    output_tokens: usage.output_tokens,
-    total_cost: inputCost + outputCost,
-    breakdown: {
-      input: inputCost,
-      output: outputCost
-    }
-  };
 }
