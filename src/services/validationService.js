@@ -75,7 +75,7 @@ function validateVendorName(vendorName) {
  * Validate reference number is present
  */
 function validateReferenceNumber(referenceNumber) {
-  if (!referenceNumber || referenceNumber.trim().length === 0) {
+  if (!referenceNumber || (typeof referenceNumber === 'string' && referenceNumber.trim().length === 0)) {
     return {
       value: referenceNumber,
       valid: false,
@@ -83,8 +83,11 @@ function validateReferenceNumber(referenceNumber) {
     };
   }
   
+  // Convert to string if it's a number
+  const refStr = typeof referenceNumber === 'number' ? referenceNumber.toString() : referenceNumber;
+  
   return {
-    value: referenceNumber,
+    value: refStr,
     valid: true
   };
 }
@@ -179,7 +182,7 @@ function validateDueDate(invoiceDate, dueDate) {
  * Validate amount format and optionally check against line items
  */
 function validateAmount(amount, lineItems = []) {
-  if (!amount) {
+  if (!amount && amount !== 0) {
     return {
       value: amount,
       valid: false,
@@ -187,8 +190,11 @@ function validateAmount(amount, lineItems = []) {
     };
   }
   
+  // Convert to string if it's a number
+  const amountStr = typeof amount === 'number' ? amount.toString() : amount;
+  
   // Remove common currency formatting
-  const cleanAmount = amount.replace(/[,$\s]/g, '');
+  const cleanAmount = amountStr.replace(/[,$\s]/g, '');
   
   // Check if numeric
   const numericAmount = parseFloat(cleanAmount);
@@ -212,7 +218,9 @@ function validateAmount(amount, lineItems = []) {
   // Check against line items if available
   if (lineItems && lineItems.length > 0) {
     const lineItemTotal = lineItems.reduce((sum, item) => {
-      const itemAmount = parseFloat(item.amount?.replace(/[,$\s]/g, '') || 0);
+      // Handle both number and string amounts
+      const itemAmountStr = typeof item.amount === 'number' ? item.amount.toString() : (item.amount || '0');
+      const itemAmount = parseFloat(itemAmountStr.replace(/[,$\s]/g, '') || 0);
       return sum + itemAmount;
     }, 0);
     
