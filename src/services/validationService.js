@@ -49,7 +49,7 @@ export function validateDocumentData(extractedData) {
  * Validate vendor name is present and reasonable
  */
 function validateVendorName(vendorName) {
-  if (!vendorName || vendorName.trim().length === 0) {
+  if (!vendorName) {
     return {
       value: vendorName,
       valid: false,
@@ -57,7 +57,18 @@ function validateVendorName(vendorName) {
     };
   }
   
-  if (vendorName.length < 2) {
+  // Convert to string if needed
+  const vendorStr = typeof vendorName === 'string' ? vendorName : String(vendorName);
+  
+  if (vendorStr.trim().length === 0) {
+    return {
+      value: vendorName,
+      valid: false,
+      error: 'Vendor name is required'
+    };
+  }
+  
+  if (vendorStr.length < 2) {
     return {
       value: vendorName,
       valid: false,
@@ -66,7 +77,7 @@ function validateVendorName(vendorName) {
   }
   
   return {
-    value: vendorName,
+    value: vendorStr,
     valid: true
   };
 }
@@ -256,33 +267,47 @@ function validateCurrency(currency) {
     };
   }
   
+  // Convert to string if needed
+  const currencyStr = typeof currency === 'string' ? currency : String(currency);
+  
   const validCurrencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'INR'];
   
-  if (!validCurrencies.includes(currency.toUpperCase())) {
+  if (!validCurrencies.includes(currencyStr.toUpperCase())) {
     return {
-      value: currency,
+      value: currencyStr,
       valid: true,
-      warning: `Unusual currency code: ${currency}`
+      warning: `Unusual currency code: ${currencyStr}`
     };
   }
   
   return {
-    value: currency.toUpperCase(),
+    value: currencyStr.toUpperCase(),
     valid: true
   };
 }
 
 /**
- * Validate customer name (optional field)
- */
-function validateCustomerName(customerName) {
-  if (!customerName || customerName.trim().length === 0) {
+ * Validate custome) {
     return {
       value: customerName,
       valid: true,
       warning: 'Customer name is empty'
     };
   }
+  
+  // Convert to string if needed
+  const nameStr = typeof customerName === 'string' ? customerName : String(customerName);
+  
+  if (nameStr.trim().length === 0) {
+    return {
+      value: customerName,
+      valid: true,
+      warning: 'Customer name is empty'
+    };
+  }
+  
+  return {
+    value: nameStr
   
   return {
     value: customerName,
