@@ -1,4 +1,4 @@
-# Invoice Assistant 🤖
+# Fin Doc Assistant 🤖
 
 An AI-powered document extraction tool that automatically extracts structured data from invoices, receipts, bills, and financial statements using Claude AI.
 
