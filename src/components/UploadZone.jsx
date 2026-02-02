@@ -41,6 +41,8 @@ export default function UploadZone({ onFileSelect }) {
   };
 
   const handleFile = (file) => {
+    console.log('📄 UploadZone: File selected:', file.name, file.type, file.size, 'bytes');
+    
     if (!file.type.startsWith('image/')) {
       alert('Please upload an image file');
       return;
@@ -49,11 +51,17 @@ export default function UploadZone({ onFileSelect }) {
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
+      const base64Data = e.target.result.split(',')[1];
+      console.log('📄 UploadZone: File read complete');
+      console.log('   - Preview length:', e.target.result.length);
+      console.log('   - Base64 length:', base64Data.length);
+      console.log('   - Base64 preview:', base64Data.substring(0, 50) + '...');
+      
       setPreview(e.target.result);
       onFileSelect({
         file,
         preview: e.target.result,
-        base64: e.target.result.split(',')[1] // Remove data:image/...;base64, prefix
+        base64: base64Data // Remove data:image/...;base64, prefix
       });
     };
     reader.readAsDataURL(file);

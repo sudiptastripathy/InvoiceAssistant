@@ -7,7 +7,14 @@ import { logger } from './logger.js';
  * Returns raw extracted fields without validation
  */
 export async function extractDocumentData(imageBase64) {
+  console.log('🤖 claudeService: Starting extraction');
+  console.log('   - Image base64 received:', !!imageBase64);
+  console.log('   - Image base64 length:', imageBase64?.length);
+  console.log('   - Image base64 preview:', imageBase64?.substring(0, 50) + '...');
+  
   try {
+    console.log('🤖 claudeService: Calling Netlify Function...');
+    
     const response = await fetch('/.netlify/functions/claude-extract', {
       method: 'POST',
       headers: {
@@ -16,12 +23,22 @@ export async function extractDocumentData(imageBase64) {
       body: JSON.stringify({ imageBase64 }),
     });
 
+    console.log('🤖 claudeService: Response received');
+    console.log('   - Status:', response.status);
+    console.log('   - Status text:', response.statusText);
+    console.log('   - OK:', response.ok);
+
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('❌ claudeService: Error response:', errorData);
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
+    console.log('🤖 claudeService: JSON parsed successfully');
+    console.log('   - Success:', result.success);
+    console.log('   - Has data:', !!result.data);
+    console.log('   - Has usage:', !!result.usage);
 
     if (!result.success) {
       throw new Error(result.error || 'Extraction failed');
@@ -37,6 +54,8 @@ export async function extractDocumentData(imageBase64) {
       hasVendor: !!extractedData.vendor_name,
       hasAmount: !!extractedData.total_amount
     });
+    
+    console.log('✅ claudeService: Extraction complete!');
     
     return {
       success: true,
@@ -54,6 +73,10 @@ export async function extractDocumentData(imageBase64) {
     };
 
   } catch (error) {
+    console.error('❌ claudeService: Extraction failed');
+    console.error('   - Error message:', error.message);
+    console.error('   - Error:', error);
+    
     logger.error('Document extraction failed', error, {
       step: 'extract',
       hasImage: !!imageBase64,

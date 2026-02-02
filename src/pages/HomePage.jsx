@@ -8,11 +8,20 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   const handleFileSelect = (fileData) => {
+    console.log('🏠 HomePage: File selected callback received');
+    console.log('   - Has file:', !!fileData.file);
+    console.log('   - Has preview:', !!fileData.preview);
+    console.log('   - Has base64:', !!fileData.base64);
+    console.log('   - Base64 length:', fileData.base64?.length);
     setUploadedFile(fileData);
   };
 
   const handleProcess = () => {
     if (!uploadedFile) return;
+    
+    console.log('🏠 HomePage: Processing document');
+    console.log('   - Image data length:', uploadedFile.base64?.length);
+    console.log('   - File name:', uploadedFile.file.name);
     
     // Navigate to processing page with file data
     navigate('/processing', { 
